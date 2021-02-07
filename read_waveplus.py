@@ -26,7 +26,7 @@
 # Module import dependencies
 # ===============================
 
-from bluepy.btle import UUID, Peripheral, Scanner, DefaultDelegate
+from bluepy.btle import UUID, Peripheral, Scanner, DefaultDelegate, BTLEDisconnectError
 import sys
 import time
 import struct
@@ -133,7 +133,18 @@ class WavePlus():
 
         # Connect to device
         if (self.periph is None):
-            self.periph = Peripheral(self.MacAddr)
+            tries = 0
+            retry = 1
+            while retry:
+                try:
+                    self.periph = Peripheral(self.MacAddr)
+                    retry = 0
+                except BTLEDisconnectError:
+                    tries = tries + 1
+                    if tries >= 5:
+                        raise Exception("Failure to open BT device. Maximum retries")
+
+
         if (self.curr_val_char is None):
             self.curr_val_char = self.periph.getCharacteristics(uuid=self.uuid)[0]
 

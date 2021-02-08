@@ -267,7 +267,7 @@ try:
             print('"Temperature": {},'.format(sensors.getValue(SENSOR_IDX_TEMPERATURE)))
             print('"Pressure": {},'.format(sensors.getValue(SENSOR_IDX_REL_ATM_PRESSURE)))
             print('"CO2 level":{},'.format(sensors.getValue(SENSOR_IDX_CO2_LVL)))
-            print('"VOC level":{},'.format(sensors.getValue(SENSOR_IDX_VOC_LVL)))
+            print('"VOC level":{}'.format(sensors.getValue(SENSOR_IDX_VOC_LVL)))
             print("}")
         elif Mode == 'json':
             print("{")

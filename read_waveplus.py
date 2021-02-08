@@ -30,6 +30,7 @@ from bluepy.btle import UUID, Peripheral, Scanner, DefaultDelegate, BTLEDisconne
 import sys
 import time
 import struct
+from datetime import datetime
 
 # ===============================
 # Script guards for correct usage
@@ -64,7 +65,7 @@ if len(sys.argv) > 3:
 else:
     Mode = 'terminal' # (default) print to terminal
 
-if Mode!='pipe' and Mode!='terminal':
+if Mode!='pipe' and Mode!='terminal' and Mode != 'json':
     print "ERROR: Invalid piping method."
     print "USAGE: read_waveplus.py SN SAMPLE-PERIOD [pipe > yourfile.txt]"
     print "    where SN is the 10-digit serial number found under the magnetic backplate of your Wave Plus."
@@ -182,6 +183,7 @@ class Sensors():
         self.sensor_version = None
         self.sensor_data    = [None]*NUMBER_OF_SENSORS
         self.sensor_units   = ["%rH", "Bq/m3", "Bq/m3", "degC", "hPa", "ppm", "ppb"]
+        self.sensor_names   = ["Humidity", "Radon short term average", "Radon long term average", "Temperature", "Pressure", "CO2 level", "VOC level"]
 
     def set(self, rawData):
         self.sensor_version = rawData[0]
@@ -210,6 +212,12 @@ class Sensors():
     def getUnit(self, sensor_index):
         return self.sensor_units[sensor_index]
 
+    def getName(self, sensor_index):
+        return self.sensor_names[sensor_index]
+
+    def getSensorData(self, sensor_index):
+        return self.getName(sensor_index), self.getValue(sensor_index), self.getUnit(senosr_index)
+
 try:
     #---- Initialize ----#
     waveplus = WavePlus(SerialNumber)
@@ -217,11 +225,13 @@ try:
     if (Mode=='terminal'):
         print "\nPress ctrl+C to exit program\n"
 
-    print "Device serial number: %s" %(SerialNumber)
 
     header = ['Humidity', 'Radon ST avg', 'Radon LT avg', 'Temperature', 'Pressure', 'CO2 level', 'VOC level']
 
-    print header
+    if (Mode=='terminal'):
+        print "Device serial number: %s" %(SerialNumber)
+        print header
+
 
     while True:
 
@@ -242,7 +252,35 @@ try:
         # Print data
         data = [humidity, radon_st_avg, radon_lt_avg, temperature, pressure, CO2_lvl, VOC_lvl]
 
-        print data
+        if (Mode=='terminal'):
+            print data
+        elif Mode == 'pipe':
+            now = datetime.now()
+
+            print("{")
+            print('"time": "{}",'.format(now.strftime("%Y-%m-%d %H:%M:%S")))
+            print('"model: "Airthings WavePlus",')
+            print('"SerialNumber": "{}",'.format(SerialNumber))
+            print('"Humidity": {},'.format(sensors.getValue(SENSOR_IDX_HUMIDITY)))
+            print('"Radon short term average": {},'.format(sensors.getValue(SENSOR_IDX_RADON_SHORT_TERM_AVG)))
+            print('"Radon long term average": {},'.format(sensors.getValue(SENSOR_IDX_RADON_LONG_TERM_AVG)))
+            print('"Temperature": {},'.format(sensors.getValue(SENSOR_IDX_TEMPERATURE)))
+            print('"Pressure": {},'.format(sensors.getValue(SENSOR_IDX_REL_ATM_PRESSURE)))
+            print('"CO2 level":{},'.format(sensors.getValue(SENSOR_IDX_CO2_LVL)))
+            print('"VOC level":{},'.format(sensors.getValue(SENSOR_IDX_VOC_LVL)))
+            print("}")
+        elif Mode == 'json':
+            print("{")
+            print('"time": "{}",'.format(now.strftime("%Y-%m-%d %H:%M:%S")))
+            print('"SerialNumber": "{}",'.format(SerialNumber))
+            print('"Humidity": {{ "value" : {}, "units" : "{}" }},'.format(sensors.getValue(SENSOR_IDX_HUMIDITY), sensors.getUnit(SENSOR_IDX_HUMIDITY)))
+            print('"Radon short term average": {{ "value": {}, "units" : "{}" }},'.format(sensors.getValue(SENSOR_IDX_RADON_SHORT_TERM_AVG), sensors.getUnit(SENSOR_IDX_RADON_SHORT_TERM_AVG)))
+            print('"Radon long term average": {{ "value": {}, "units" : "{}" }},'.format(sensors.getValue(SENSOR_IDX_RADON_LONG_TERM_AVG), sensors.getUnit(SENSOR_IDX_RADON_LONG_TERM_AVG)))
+            print('"Temperature": {{ "value": {}, "units" : "{}" }},'.format(sensors.getValue(SENSOR_IDX_TEMPERATURE), sensors.getUnit(SENSOR_IDX_TEMPERATURE)))
+            print('"Pressure": {{ "value": {}, "units" : "{}" }},'.format(sensors.getValue(SENSOR_IDX_REL_ATM_PRESSURE), sensors.getUnit(SENSOR_IDX_REL_ATM_PRESSURE)))
+            print('"CO2 level": {{ "value": {}, "units" : "{}" }},'.format(sensors.getValue(SENSOR_IDX_CO2_LVL), sensors.getUnit(SENSOR_IDX_CO2_LVL)))
+            print('"VOC level": {{ "value": {}, "units" : "{}" }}'.format(sensors.getValue(SENSOR_IDX_VOC_LVL), sensors.getUnit(SENSOR_IDX_VOC_LVL)))
+            print("}")
 
         waveplus.disconnect()
 
